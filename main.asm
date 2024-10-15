@@ -29,16 +29,15 @@
 	
 .macro print_str (%x)
 	li $v0 4
-	add $a0, $zero, %x
+	la $a0, %x
 	syscall
 .end_macro
+
 .globl main
 .text
 main:
-	la $a0, welcome_msg
-	jal print
-	la $a0, input_prmpt
-	jal print
+	print_str (welcome_msg)
+	print_str (input_prmpt)
 	la $a0, buffer
 	li $a1, 101
 	jal get_string
@@ -67,10 +66,9 @@ white_space_wipeout:
 done:						#
 	li $t2, '\n'				# Load newline
 	sb $t2, 0($t1)				# Store newline at end of string!
-	la $a0, output_msg			# Store the message to format the output
-	jal print				# Print that string!
-	la $a0, output_buffer			# load the output buffer to be printed
-	jal print				# print that string!
+	print_str (output_msg) # Store the message to format the output
+	print_str (output_buffer)			# load the output buffer to be printed
+
 ####################################################################################################
 # function: again
 # purpose: to user to repeat or close the program
@@ -87,8 +85,7 @@ again:						#
 	la $a0, output_buffer	# load buffer for reset
 	jal reset_buffer		# reset that buffer
 
-	la $a0, repeat_msg 			# load address of result_msg_m1 into $a0
-	jal print 				# print the result message
+	print_str (repeat_msg) 			# load address of result_msg_m1 into $a0
 	li $v0, 8				# system call code for read str
 	la $a0, buffer				# load the address of the buffer
 	li $a1, 5				# only accept characters equal to the buffer size
@@ -116,8 +113,7 @@ again:						#
 #	$a0 - message storage for print
 ####################################################################################################	
 end:						#
-	la $a0, bye	 			# load address of bye into $a0
-	jal print 				# print the goodbye message
+	print_str (bye)	 		# load address of bye into $a0
 	li $v0, 10				# system call code for returning control to system
 	syscall					# GOODBYE!
 ####################################################################################################
@@ -139,9 +135,5 @@ reset_buffer:
 	
 get_string:
 	li $v0 8
-	syscall
-	jr $ra
-print:
-	li $v0 4
 	syscall
 	jr $ra
