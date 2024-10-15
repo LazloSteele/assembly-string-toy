@@ -26,6 +26,12 @@
 	buffer: .space 100
 	output_buffer: .space 100
 	buffer_size: .word 101
+	
+.macro print_str (%x)
+	li $v0 4
+	add $a0, $zero, %x
+	syscall
+.end_macro
 .globl main
 .text
 main:
