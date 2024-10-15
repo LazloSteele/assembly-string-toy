@@ -24,7 +24,8 @@
 	output_msg: .asciiz "The compressed string is: "
 	bye: .asciiz "Toodles! ;)"
 	buffer: .space 100
-	output_buffer: .space 101
+	output_buffer: .space 100
+	buffer_size: .word 101
 .globl main
 .text
 main:
@@ -74,6 +75,12 @@ done:						#
 #	$t1 - ascii 'a', 'Y', and 'N'
 ####################################################################################################
 again:						#
+	la $a0, buffer			# load buffer for reset
+	lw $a1, buffer_size		# load empty value to reset the buffer
+	jal reset_buffer		# reset the buffer!
+	la $a0, output_buffer	# load buffer for reset
+	jal reset_buffer		# reset that buffer
+
 	la $a0, repeat_msg 			# load address of result_msg_m1 into $a0
 	jal print 				# print the result message
 	li $v0, 8				# system call code for read str
@@ -108,6 +115,22 @@ end:						#
 	li $v0, 10				# system call code for returning control to system
 	syscall					# GOODBYE!
 ####################################################################################################
+reset_buffer:
+	move $s0, $ra			# return address to $s0
+	move $t0, $a0			# buffer to $t0
+	move $t1, $a1			# buffer_size to $t1
+	li $t2, 0				# to reset values in buffer
+	li $t3, 0				# initialize iterator
+	reset_buffer_loop:		#
+		bge $t3, $t1, reset_buffer_return
+		sw $t2, 0($t0)		# store a 0
+		addi $t0, $t0, 4	# next word in buffer
+		addi $t3, $t3, 1	# iterate it!
+		j reset_buffer_loop # and loop!
+	reset_buffer_return:
+	move $ra, $s0			# get ready to return
+	jr $ra					# return to caller
+	
 get_string:
 	li $v0 8
 	syscall
