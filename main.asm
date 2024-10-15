@@ -19,14 +19,17 @@
 .data
 	welcome_msg: .asciiz "Welcome to the String Shortener Emporium! We will take your whitespace and punctuation free of charge!\n"
 	input_prmpt: .asciiz "vvv Please enter a string of up to 100 characters on the line below vvv\n"
-	repeat_msg: .asciiz "Go again? Y/N > "
+	repeat_msg: .asciiz "\nGo again? Y/N > "
 	invalid_msg: .asciiz "Invalid input. Try again!\n"
 	output_msg: .asciiz "The compressed string is: "
 	bye: .asciiz "Toodles! ;)"
+	letter_map: .asciiz "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z"
+	space: .ascii " "
 	newline: .asciiz "\n"
 	.align 2
 	buffer: .space 100
-	condensed_length: .word 0
+	.align 2
+	frequency_map: .word 0 : 26
 
 .include "macros.asm"
 
@@ -43,9 +46,12 @@ main:
 	reset_buffer (buffer, 101)
 	la $a0, buffer
 	jal stack_to_buffer
-	
 	jal print_condensed
 
+	la $a0, buffer
+	jal letter_frequency
+	jal print_frequency
+	
 	again_loop:
 		again
 		j again_loop
@@ -68,7 +74,7 @@ condensed_to_stack:
 		store_char:
 			sb $t2, 0($t1)       	# store the character in the stack
 			addi $t1, $t1, 1	# move the address up one to store the next character
-		iterate:			#
+		iterate:			 #
 			addi $t0, $t0, 1	# yo dawg I hear you like iterating so we iterate the iterator			
     		j for_char		# so you can iterate... the function...	
 	done:
@@ -90,6 +96,63 @@ stack_to_buffer:
     	j for_char_in_stack		# so you can iterate... the function...	
 
 	stack_done:
+		move $ra, $s0
+		jr $ra
+
+#################################
+letter_frequency:
+	upper (buffer)
+
+	move $s0, $ra
+	move $t0, $a0
+	
+	li $t1, 'A'
+	li $t2, 0
+	la $t3, frequency_map
+	frequency_loop:
+		bgt $t1, 'Z', frequency_done
+		lb $t4, 0($t0)
+		beq $t4, 0, iterate_letter
+		bne $t4, $t1, iterate_char
+		addi $t2, $t2, 1
+		iterate_char:
+			addi $t0, $t0, 1
+			j frequency_loop
+		iterate_letter:
+			sw $t2, 0($t3)
+			li $t2, 0
+			addi $t3, $t3, 4
+			addi $t1, $t1, 1
+			move $t0, $a0
+			j frequency_loop
+	frequency_done:
+		move $ra, $s0
+		jr $ra
+
+#################################
+print_frequency:
+	move $s0, $ra
+	
+	la $t0, frequency_map
+	li $t1, 26
+	
+	print_str (letter_map)
+	print_str (newline)
+		
+	print_frequency_loop:
+		beqz $t1, print_frequency_done
+		lw $a0, 0($t0)
+		li $v0, 1
+		syscall
+		li $a0, ' '
+		li $v0, 11
+		syscall
+		addi $t1, $t1, -1
+		addi $t0, $t0, 4
+		
+		j print_frequency_loop
+		
+	print_frequency_done:
 		move $ra, $s0
 		jr $ra
 

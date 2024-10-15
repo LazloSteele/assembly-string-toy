@@ -48,7 +48,7 @@
 		is_upper:				#
 			sb $t2, 0($t0)		#
 		addi $t0, $t0, 1		# next byte
-		bne $t2, 10, upper_loop
+		bne $t2, 0, upper_loop
 .end_macro
 ####################################################################################################
 # macro: alpha
