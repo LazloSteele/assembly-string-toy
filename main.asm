@@ -41,6 +41,45 @@
 	la $a0, %message
 	syscall
 .end_macro
+
+####################################################################################################
+# function: again
+# purpose: to user to repeat or close the program
+# registers used:
+#	$v0 - syscall codes
+#	$a0 - message storage for print and buffer storage
+#	$t0 - stores the memory address of the buffer and first character of the input received
+#	$t1 - ascii 'a', 'Y', and 'N'
+####################################################################################################
+.macro again				#
+	la $a0, buffer			# load buffer for reset
+	lw $a1, buffer_size		# load empty value to reset the buffer
+	jal reset_buffer		# reset the buffer!
+	la $a0, output_buffer	# load buffer for reset
+	jal reset_buffer		# reset that buffer
+
+	print_str (repeat_msg) 			# load address of result_msg_m1 into $a0
+	li $v0, 8				# system call code for read str
+	la $a0, buffer				# load the address of the buffer
+	li $a1, 5				# only accept characters equal to the buffer size
+	syscall 				# get that str!
+	la $t0, buffer				# load the buffer for string manipulation
+	lb $t0, 0($t0)				# load the first character of the input string
+	li $t1, 'a'				# check if lower case
+	blt $t0, $t1, is_upper			# bypass uppercaserizer if character is already upper case (or invalid)
+	to_upper:				#
+		subi $t0, $t0, 32		# Convert to uppercase (ASCII difference between 'a' and 'A' is 32)
+	is_upper:				#
+		li $t1, 'Y'			# store the value of ASCII 'Y' for comparison
+		beq $t0, $t1, main		# If yes, go back to the start of main
+		li $t1, 'N'			# store the value of ASCII 'N' for comparison
+		beq $t0, $t1, end_program		# If no, goodbye!
+		print_str (invalid_msg) 		# load address of invalid_msg into $a0
+		j invalid				# if invalid try again...
+	end_program:
+		end
+	invalid:
+.end_macro
 ####################################################################################################
 # function: end
 # purpose: to eloquently terminate the program
@@ -89,46 +128,11 @@ done:						#
 	sb $t2, 0($t1)				# Store newline at end of string!
 	print_str (output_msg) # Store the message to format the output
 	print_str (output_buffer)			# load the output buffer to be printed
-
-####################################################################################################
-# function: again
-# purpose: to user to repeat or close the program
-# registers used:
-#	$v0 - syscall codes
-#	$a0 - message storage for print and buffer storage
-#	$t0 - stores the memory address of the buffer and first character of the input received
-#	$t1 - ascii 'a', 'Y', and 'N'
-####################################################################################################
-again:						#
-	la $a0, buffer			# load buffer for reset
-	lw $a1, buffer_size		# load empty value to reset the buffer
-	jal reset_buffer		# reset the buffer!
-	la $a0, output_buffer	# load buffer for reset
-	jal reset_buffer		# reset that buffer
-
-	print_str (repeat_msg) 			# load address of result_msg_m1 into $a0
-	li $v0, 8				# system call code for read str
-	la $a0, buffer				# load the address of the buffer
-	li $a1, 5				# only accept characters equal to the buffer size
-	syscall 				# get that str!
-	la $t0, buffer				# load the buffer for string manipulation
-	lb $t0, 0($t0)				# load the first character of the input string
-	li $t1, 'a'				# check if lower case
-	blt $t0, $t1, is_upper			# bypass uppercaserizer if character is already upper case (or invalid)
-	to_upper:				#
-		subi $t0, $t0, 32		# Convert to uppercase (ASCII difference between 'a' and 'A' is 32)
-	is_upper:				#
-		li $t1, 'Y'			# store the value of ASCII 'Y' for comparison
-		beq $t0, $t1, main		# If yes, go back to the start of main
-		li $t1, 'N'			# store the value of ASCII 'N' for comparison
-		beq $t0, $t1, end_program		# If no, goodbye!
-		li $v0, 4			# system call code for print_str
-		la $a0, invalid_msg 		# load address of invalid_msg into $a0
-		syscall 			# print the result message
-		j again				# if invalid try again...
-	end_program:
-		end
-####################################################################################################
+again_loop:
+	again
+	print_str (invalid_msg)
+	j again_loop
+###############################################################################
 reset_buffer:
 	move $s0, $ra			# return address to $s0
 	move $t0, $a0			# buffer to $t0
