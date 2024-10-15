@@ -26,12 +26,33 @@
 	buffer: .space 100
 	output_buffer: .space 100
 	buffer_size: .word 101
-	
-.macro print_str (%x)
+
+####################################################################################################
+# macro: print_str
+# purpose: to make printing messages more eloquent
+# registers used:
+#	$v0 - syscall codes
+#	$a0 - message storage for print
+# variables used:
+#	%x - message to be printed
+####################################################################################################		
+.macro print_str (%message)
 	li $v0 4
-	la $a0, %x
+	la $a0, %message
 	syscall
 .end_macro
+####################################################################################################
+# function: end
+# purpose: to eloquently terminate the program
+# registers used:
+#	$v0 - syscall codes
+####################################################################################################	
+.macro end 					#
+	print_str (bye)	 		# load address of bye into $a0
+	li $v0, 10				# system call code for returning control to system
+	syscall					# GOODBYE!
+.end_macro					#
+####################################################################################################
 
 .globl main
 .text
@@ -100,22 +121,13 @@ again:						#
 		li $t1, 'Y'			# store the value of ASCII 'Y' for comparison
 		beq $t0, $t1, main		# If yes, go back to the start of main
 		li $t1, 'N'			# store the value of ASCII 'N' for comparison
-		beq $t0, $t1, end		# If no, goodbye!
+		beq $t0, $t1, end_program		# If no, goodbye!
 		li $v0, 4			# system call code for print_str
 		la $a0, invalid_msg 		# load address of invalid_msg into $a0
 		syscall 			# print the result message
 		j again				# if invalid try again...
-####################################################################################################
-# function: end
-# purpose: to eloquently terminate the program
-# registers used:
-#	$v0 - syscall codes
-#	$a0 - message storage for print
-####################################################################################################	
-end:						#
-	print_str (bye)	 		# load address of bye into $a0
-	li $v0, 10				# system call code for returning control to system
-	syscall					# GOODBYE!
+	end_program:
+		end
 ####################################################################################################
 reset_buffer:
 	move $s0, $ra			# return address to $s0
