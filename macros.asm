@@ -22,6 +22,7 @@
 #	%x - message to be printed
 ####################################################################################################		
 .macro read_str (%buffer_address, %buffer_size)
+	reset_buffer (%buffer_address, %buffer_size)
 	li $v0, 8
 	la $a0, %buffer_address
 	li $a1, %buffer_size

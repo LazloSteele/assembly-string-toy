@@ -37,12 +37,26 @@ main:
 	print_str (input_prmpt)
 	read_str (buffer, 101)
 	
-	la $t0, buffer
+	la $a0, buffer
+	jal white_space_wipeout
+	
+	la $a0, output_buffer
+	jal print_condensed
+
+	reset_buffer (output_buffer, 101)	# reset output buffer
+	j again_loop
+	
+again_loop:
+	again
+	j again_loop
+
 white_space_wipeout:
+	move $s0, $ra
+	move $t0, $a0
 	la $t1, output_buffer			#
 	for_char:				#
-	    	lb $t2, 0($t0)   		# Load byte from buffer
-    		beq $t2, 10, done   		# '\n' or 0a [HEX] or 10 [DEC] denotes end of string, if end of string is reached without error then input is valid!
+	   	lb $t2, 0($t0)   		# Load byte from buffer
+    	beq $t2, 10, done   		# '\n' or 0a [HEX] or 10 [DEC] denotes end of string, if end of string is reached without error then input is valid!
 		blt $t2, 'A', invalid		# If byte is less than ascii 'A' then it's not alphabetic
 		bgt $t2, 'Z', mebbe		# If byte is greater than 'Z' then maybe valid as a lower but also maybe punctuation
 		j valid				#
@@ -59,15 +73,17 @@ white_space_wipeout:
 		iterate:			#
 			addi $t0, $t0, 1	# yo dawg I hear you like iterating so we iterate the iterator			
     			j for_char		# so you can iterate... the function...	
-done:						#
-	li $t2, '\n'				# Load newline
-	sb $t2, 0($t1)				# Store newline at end of string!
+	done:
+		move $ra, $s0
+		jr $ra
+
+print_condensed:
+	move $s0, $ra
+	move $t0, $a0
+	
 	print_str (output_msg) # Store the message to format the output
 	print_str (output_buffer)			# load the output buffer to be printed
-
-reset_buffer (buffer, 101)			# reset input buffer
-reset_buffer (output_buffer, 101)	# reset output buffer
-again_loop:
-	again
-	j again_loop
+	print_str (newline)
 	
+	move $ra, $s0
+	jr $ra
