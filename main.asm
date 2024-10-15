@@ -23,9 +23,10 @@
 	invalid_msg: .asciiz "Invalid input. Try again!\n"
 	output_msg: .asciiz "The compressed string is: "
 	bye: .asciiz "Toodles! ;)"
+	newline: .asciiz "\n"
+	.align 2
 	buffer: .space 100
 	output_buffer: .space 100
-	buffer_size: .word 101
 
 ####################################################################################################
 # macro: print_str
@@ -56,7 +57,28 @@
 	li $a1, %buffer_size
 	syscall
 .end_macro
-
+####################################################################################################
+# macro: upper
+# purpose: to make printing messages more eloquent
+# registers used:
+#	$t0 - string to check for upper case
+#	$t1 - ascii 'a', 'A'-'Z' is all lower value than 'a'
+# variables used:
+#	%message - message to be printed
+####################################################################################################		
+.macro upper (%buffer)
+	la $t0, %buffer
+	li $t1, 'a'				# check if lower case
+	upper_loop:
+		lb $t2, 0($t0)
+		blt $t2, $t1, is_upper	# bypass uppercaserizer if character is already upper case (or invalid)
+		to_upper:				#
+			subi $t2, $t2, 32	# Convert to uppercase (ASCII difference between 'a' and 'A' is 32)
+		is_upper:				#
+			sb $t2, 0($t0)		#
+		addi $t0, $t0, 1		# next byte
+		bne $t2, 10, upper_loop
+.end_macro
 ####################################################################################################
 # function: again
 # purpose: to user to repeat or close the program
@@ -66,32 +88,38 @@
 #	$t0 - stores the memory address of the buffer and first character of the input received
 #	$t1 - ascii 'a', 'Y', and 'N'
 ####################################################################################################
-.macro again				#
-	la $a0, buffer			# load buffer for reset
-	lw $a1, buffer_size		# load empty value to reset the buffer
-	jal reset_buffer		# reset the buffer!
-	la $a0, output_buffer	# load buffer for reset
-	jal reset_buffer		# reset that buffer
-
+.macro again
 	print_str (repeat_msg) 			# load address of result_msg_m1 into $a0
 	read_str (buffer, 4)	# load the address of the buffer
+	upper (buffer)			# load the buffer for string manipulation
 
-	la $t0, buffer				# load the buffer for string manipulation
-	lb $t0, 0($t0)				# load the first character of the input string
-	li $t1, 'a'				# check if lower case
-	blt $t0, $t1, is_upper			# bypass uppercaserizer if character is already upper case (or invalid)
-	to_upper:				#
-		subi $t0, $t0, 32		# Convert to uppercase (ASCII difference between 'a' and 'A' is 32)
-	is_upper:				#
-		li $t1, 'Y'			# store the value of ASCII 'Y' for comparison
-		beq $t0, $t1, main		# If yes, go back to the start of main
-		li $t1, 'N'			# store the value of ASCII 'N' for comparison
-		beq $t0, $t1, end_program		# If no, goodbye!
-		print_str (invalid_msg) 		# load address of invalid_msg into $a0
-		j invalid				# if invalid try again...
+	la $t0, buffer
+	lb $t0, 0($t0)
+	li $t1, 'Y'			# store the value of ASCII 'Y' for comparison
+	beq $t0, $t1, main	# If yes, go back to the start of main
+	li $t1, 'N'			# store the value of ASCII 'N' for comparison
+	beq $t0, $t1, end_program		# If no, goodbye!
+	j invalid				# if invalid try again...
+	
 	end_program:
 		end
+		
 	invalid:
+		print_str (invalid_msg)
+.end_macro
+###############################################################################
+.macro reset_buffer (%buffer, %buffer_length)
+	la $t0, %buffer			# buffer to $t0
+	li $t1, %buffer_length	# buffer_size to $t1
+	li $t2, 0				# to reset values in buffer
+	li $t3, 0				# initialize iterator
+	reset_buffer_loop:		#
+		bge $t3, $t1, reset_buffer_return
+		sw $t2, 0($t0)		# store a 0
+		addi $t0, $t0, 4	# next word in buffer
+		addi $t3, $t3, 1	# iterate it!
+		j reset_buffer_loop # and loop!
+	reset_buffer_return:
 .end_macro
 ####################################################################################################
 # function: end
@@ -112,6 +140,7 @@ main:
 	print_str (welcome_msg)
 	print_str (input_prmpt)
 	read_str (buffer, 101)
+	
 	la $t0, buffer
 white_space_wipeout:
 	la $t1, output_buffer			#
@@ -139,24 +168,10 @@ done:						#
 	sb $t2, 0($t1)				# Store newline at end of string!
 	print_str (output_msg) # Store the message to format the output
 	print_str (output_buffer)			# load the output buffer to be printed
+
+reset_buffer (buffer, 101)			# reset input buffer
+reset_buffer (output_buffer, 101)	# reset output buffer
 again_loop:
 	again
-	print_str (invalid_msg)
 	j again_loop
-###############################################################################
-reset_buffer:
-	move $s0, $ra			# return address to $s0
-	move $t0, $a0			# buffer to $t0
-	move $t1, $a1			# buffer_size to $t1
-	li $t2, 0				# to reset values in buffer
-	li $t3, 0				# initialize iterator
-	reset_buffer_loop:		#
-		bge $t3, $t1, reset_buffer_return
-		sw $t2, 0($t0)		# store a 0
-		addi $t0, $t0, 4	# next word in buffer
-		addi $t3, $t3, 1	# iterate it!
-		j reset_buffer_loop # and loop!
-	reset_buffer_return:
-	move $ra, $s0			# get ready to return
-	jr $ra					# return to caller
 	
