@@ -41,6 +41,21 @@
 	la $a0, %message
 	syscall
 .end_macro
+####################################################################################################
+# macro: read_str
+# purpose: to make printing messages more eloquent
+# registers used:
+#	$v0 - syscall codes
+#	$a0 - message storage for print
+# variables used:
+#	%x - message to be printed
+####################################################################################################		
+.macro read_str (%buffer_address, %buffer_size)
+	li $v0, 8
+	la $a0, %buffer_address
+	li $a1, %buffer_size
+	syscall
+.end_macro
 
 ####################################################################################################
 # function: again
@@ -59,10 +74,8 @@
 	jal reset_buffer		# reset that buffer
 
 	print_str (repeat_msg) 			# load address of result_msg_m1 into $a0
-	li $v0, 8				# system call code for read str
-	la $a0, buffer				# load the address of the buffer
-	li $a1, 5				# only accept characters equal to the buffer size
-	syscall 				# get that str!
+	read_str (buffer, 4)	# load the address of the buffer
+
 	la $t0, buffer				# load the buffer for string manipulation
 	lb $t0, 0($t0)				# load the first character of the input string
 	li $t1, 'a'				# check if lower case
@@ -98,9 +111,7 @@
 main:
 	print_str (welcome_msg)
 	print_str (input_prmpt)
-	la $a0, buffer
-	li $a1, 101
-	jal get_string
+	read_str (buffer, 101)
 	la $t0, buffer
 white_space_wipeout:
 	la $t1, output_buffer			#
@@ -149,7 +160,3 @@ reset_buffer:
 	move $ra, $s0			# get ready to return
 	jr $ra					# return to caller
 	
-get_string:
-	li $v0 8
-	syscall
-	jr $ra
